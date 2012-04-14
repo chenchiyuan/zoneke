@@ -1,0 +1,6 @@
+2012-04-12 08:40:29,676 [MainThread:-1215658304] [default:63] [ERROR]- Err is Error 111 connecting 127.0.0.1:6379. Connection refused.
+2012-04-12 10:10:40,516 [MainThread:-1215715648] [default:64] [ERROR]- Err is wrong number of arguments for 'zinterstore' command
+2012-04-12 10:26:17,045 [MainThread:-1217304896] [default:65] [ERROR]- Err is wrong number of arguments for 'zinterstore' command
+2012-04-12 10:31:27,068 [MainThread:-1215555904] [default:66] [ERROR]- Err is wrong number of arguments for 'zinterstore' command
+2012-04-12 10:36:31,214 [MainThread:-1216719168] [default:67] [ERROR]- Err is wrong number of arguments for 'zinterstore' command
+2012-04-12 10:39:04,378 [MainThread:-1216776512] [default:67] [ERROR]- Err is wrong number of arguments for 'zinterstore' command
