@@ -133,6 +133,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'tags',
+    'places',
 )
 
 LOGGING = {

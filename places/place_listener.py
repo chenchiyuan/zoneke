@@ -2,7 +2,7 @@
 __author__ = 'chenchiyuan'
 from core.cache import cache
 from threading import Thread
-from const import PLACE_MSG_CENTER_PREFIX
+from core.const import PLACE_MSG_CENTER_PREFIX
 
 class PlaceMsgCenter(Thread):
     '''
@@ -13,22 +13,22 @@ class PlaceMsgCenter(Thread):
         3. user only get infos from PlaceMsgCenter Cache
     '''
 
-    def __init__(self, area):
-        Thread.__init__(self, name=area)
-        self.area = area
+    def __init__(self, slug):
+        Thread.__init__(self, name=slug)
+        self.slug = slug
         self.pubsub = cache.pubsub()
-        self.cache_key = PLACE_MSG_CENTER_PREFIX + area
+        self.cache_key = PLACE_MSG_CENTER_PREFIX + slug
 
     def to_cache(self):
         mapping = {
-            'area': self.area,
+            'slug': self.slug,
             'user_list': [],
             'channels': [],
         }
         cache.hmset(self.cache_key, mapping)
 
     def run(self):
-        self.pubsub.psubscribe('feed:%s:*' %self.area)
+        self.pubsub.psubscribe('feed:%s:*' %self.slug)
         for msg in self.pubsub.listen():
             channel = msg['channel']
             data = msg['data']
