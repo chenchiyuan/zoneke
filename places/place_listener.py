@@ -2,7 +2,7 @@
 __author__ = 'chenchiyuan'
 from core.cache import cache
 from threading import Thread
-from core.const import PLACE_MSG_CENTER_PREFIX
+from core.const import PLACE_MSG_CENTER_PREFIX, FEEDS_PREFIX
 
 class PlaceMsgCenter(Thread):
     '''
@@ -28,10 +28,10 @@ class PlaceMsgCenter(Thread):
         cache.hmset(self.cache_key, mapping)
 
     def run(self):
-        self.pubsub.psubscribe('feed:%s:*' %self.slug)
+        self.pubsub.psubscribe('%s%s:*' %(FEEDS_PREFIX, self.slug))
         for msg in self.pubsub.listen():
             channel = msg['channel']
             data = msg['data']
-            tag_name = channel[5:]
+            tag_name = channel[6:]
             cache.lpush(tag_name, data)
 

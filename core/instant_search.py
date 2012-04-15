@@ -22,7 +22,7 @@ class SearchIndex(object):
         if isinstance(word, (unicode, type(None))):
             return word.encode('utf-8')
         try:
-            return unicode(word, 'utf-8')
+            return unicode(word, 'utf-8').encode('utf-8')
         except:
             return word.encode('utf-8')
 
@@ -30,7 +30,7 @@ class SearchIndex(object):
     def score(word):
         logger.debug("will score a word %s" %word)
 
-    def parse(self, words):
+    def __parse(self, words):
         words = SearchIndex.__to_unicode(words)
         _seg_words = [word for word in seg_txt(words)]
         seg_words = filter(None, _seg_words)
@@ -42,6 +42,17 @@ class SearchIndex(object):
             results.append(key)
         return results
 
+    def parse(self, words):
+        words = SearchIndex.__to_unicode(words)
+        _seg_words = [word for word in seg_txt(words)]
+        seg_words = filter(None, _seg_words)
+        results = []
+        for word in seg_words:
+            word_utf8 = SearchIndex.__to_unicode(word)
+            decode_word = unidecode(word_utf8)
+            key = slugify(decode_word)
+            results.append(key)
+        return results
 
     def add(self, word, key, score):
         try:
@@ -77,7 +88,7 @@ class SearchIndex(object):
     def add_tag(self, tag):
         if not tag:
             return
-        words = self.parse(tag.name_zh)
+        words = self.__parse(tag.name_zh)
         words.extend(tag.name_en)
         for word in words:
             self.add(word=word, key=tag.cache_key, score=tag.score)

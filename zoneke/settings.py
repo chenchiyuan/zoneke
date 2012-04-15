@@ -134,6 +134,9 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'tags',
     'places',
+    'profiles',
+    'questions',
+    'actions'
 )
 
 LOGGING = {

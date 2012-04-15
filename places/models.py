@@ -27,7 +27,7 @@ class Area(Document):
     channels = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
 
     @classmethod
-    def generate_area(cls, max_num=5):
+    def __generate_area(cls, max_num=5):
         center = CENTER_PLACE
         def get_lat_lng(slug):
             num, mod = divmod(slug, 4)
@@ -59,3 +59,14 @@ class Area(Document):
     @property
     def centorid(self):
         return centorid[1], centorid[0]
+
+    @classmethod
+    def start_listeners(cls):
+        areas = Area.objects()
+        if not areas.count():
+            cls.__generate_area()
+            return
+
+        for area in areas:
+            center = PlaceMsgCenter(slug=area.slug)
+            center.start()
