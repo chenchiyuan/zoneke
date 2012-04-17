@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'chenchiyuan'
+
+#RECOMMENDATION SETTINGS
+SIMILARILY = 'euclid' # euclid, pearson
+
 #place settings
 CENTER_PLACE = (10, 10)
 PER_GEO = 1

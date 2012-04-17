@@ -4,7 +4,7 @@ from core.const import TEXT_MAX, TAG_KEY_PREFIX, TAG_DEFAULT_SCORE
 from core.cache import cache
 from django.template.defaultfilters import slugify
 from unidecode import unidecode
-from core.util import to_unicode
+from utils.util import to_unicode
 from core.instant_search import SearchIndex
 import logging
 
