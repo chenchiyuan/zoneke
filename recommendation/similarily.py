@@ -31,21 +31,16 @@ def pearson(item_a, item_b):
     if num == 0:
         return 1
 
-    sum_a = 0
-    for like in item_a_likes:
-        sum_a += like.score
+    sum1 = sum([item_a_likes[i].socre for i in range(num)])
+    sum2 = sum([item_b_likes[i].socre for i in range(num)])
 
-    sum_b = 0
-    for like in item_b_likes:
-        sum_b += like.score
+    sum1_sq = sum([pow(item_a_likes[i].score, 2) for i in range(num)])
+    sum2_sq = sum([pow(item_b_likes[i].score, 2) for i in range(num)])
 
-    avg_a = sum_a/num
-    avg_b = sum_b/num
+    p_sum = sum([(item_a_likes[i].score*item_b_likes[i].score) for i in range(num)])
 
-    mol = sum([like.score - avg_a for like in item_a_likes])*\
-        sum([like.score - avg_b for like in item_b_likes])
-    den = sqrt(sum([pow(like.score-avg_a, 2) for like in item_a_likes]))*\
-        sqrt(sum([pow(like.score-avg_b, 2) for like in item_b_likes]))
+    mol = p_sum - sum1*sum2/num
+    den = sqrt(sum1_sq - pow(sum1, 2)/num)*(sum2_sq - pow(sum2, 2)/num)
 
     if den == 0:
         return 0

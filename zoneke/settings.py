@@ -136,7 +136,8 @@ INSTALLED_APPS = (
     'places',
     'profiles',
     'questions',
-    'actions'
+    'actions',
+    'items',
 )
 
 LOGGING = {

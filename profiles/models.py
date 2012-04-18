@@ -25,7 +25,7 @@ class Profile(User):
     #dynamic field
     centroid = GeoPointField()
     score = FloatField(default=0.0)
-    likes = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
+    tags = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
     history = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
 
     @classmethod
@@ -60,7 +60,7 @@ class Profile(User):
 
         search = SearchIndex()
         tags = search.parse(title)
-        self.update_likes(tags=tags)
+        self.update_tags(tags=tags)
         question = Question.create(title=title, area_slug=self.area_slug, centroid=centroid,
             author_name=self.username, content=content, tags=tags)
         self.publish(question)
@@ -74,20 +74,20 @@ class Profile(User):
 
     def get_feeds(self):
         self.reload()
-        tags = self.likes
+        tags = self.tags
         feeds = []
         for tag in tags:
             channel = self.area_slug + ':' + tag
             feeds.append(cache.rpop(channel))
         return feeds
 
-    def update_likes(self, tags):
+    def update_tags(self, tags):
         #TODO need some arithmetic
-        print("update user likes with tags: %s" %tags)
-        likes = self.likes
-        if likes:
-            likes = [like for like in likes]
-            likes = list(set(likes.extend(tags)))
+        print("update user tags with tags: %s" %tags)
+        tags = self.tags
+        if tags:
+            tags = [like for like in tags]
+            tags = list(set(tags.extend(tags)))
         else:
-            likes = tags
-        self.update(set__likes=likes)
+            tags = tags
+        self.update(set__tags=tags)
