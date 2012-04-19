@@ -17,7 +17,7 @@ class Command(BaseCommand):
         if not args:
             return
 
-        path = '/home/chenchiyuan/projects/data_set/ml-10M100K/'
+        path = '/home/chenchiyuan/projects/data_set/ml-1m/'
         if args[0] == 'movie':
             file = open(path + 'movies.dat')
             lines = file.readlines()
