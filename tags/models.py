@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from mongoengine import Document, StringField, IntField
-from core.const import TEXT_MAX, TAG_KEY_PREFIX, TAG_DEFAULT_SCORE
+from core.const import TEXT_MAX, TAG_KEY_PREFIX, TAG_DEFAULT_SCORE, BASIC_CACHE_PREFIX, LIMIT, BASIC_TAG_PREFIX
 from core.cache import cache
 from django.template.defaultfilters import slugify
 from unidecode import unidecode
@@ -11,6 +11,12 @@ import logging
 logger = logging.getLogger('default')
 
 class Tag(Document):
+    '''
+        Baike data saved in tags tags
+        tag name saved in names results
+        '''
+
+
     slug = StringField(max_length=TEXT_MAX, required=True, unique=True)
     name_en = StringField(max_length=TEXT_MAX, required=True)
     name_zh = StringField(max_length=TEXT_MAX, required=True)
@@ -64,3 +70,48 @@ class Tag(Document):
         si = SearchIndex()
         for tag in tags:
             si.add_tag(tag)
+
+    @classmethod
+    def see_top_tags(cls):
+        keys = cache.keys(pattern='%s*' %BASIC_CACHE_PREFIX)
+        set_name = 'TEMP:SET'
+        for key in keys:
+            value = float(cache.get(key))
+            key = key[9:]
+            cache.zadd(set_name, value, key)
+
+        results = cache.zrevrange(name=set_name, start=0, num=LIMIT, withscores=True)
+        results = [{'name': r[0].decode('utf-8'), 'value': r[1]} for r in results]
+        from pymongo import Connection
+        c = Connection()
+        db = c.names
+        if results:
+            db.results.insert(results)
+        cache.delete(set_name)
+        return results
+
+    @classmethod
+    def clear_top_tags(cls):
+        from pymongo import Connection
+        c = Connection()
+        db = c.names
+        db.results.remove()
+
+
+    @classmethod
+    def loads_basic_tags_to_cache(cls):
+        from pymongo import Connection
+        c = Connection()
+        db = c.names
+
+        tags = db.results.find()
+        keys = cache.keys(pattern='%s*' %BASIC_TAG_PREFIX)
+        for key in keys:
+            cache.delete(key)
+
+        for tag in tags:
+            name = tag['name'].split(':')[1]
+            key = BASIC_TAG_PREFIX + name
+            value = tag['value']
+            if int(value) > 1:
+                cache.set(key, name)
