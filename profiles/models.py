@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from mongoengine.django.auth import User
 from mongoengine.fields import StringField, GeoPointField, FloatField, ListField
-from core.const import SLUG_MAX, TEXT_MAX, PLACE_MSG_CENTER_PREFIX, FEEDS_PREFIX
+from core.const import SLUG_MAX, TEXT_MAX, PLACE_MSG_CENTER_PREFIX, FEEDS_PREFIX, DEFAULT_PASSWORD
 from places.models import Area
 from core.instant_search import SearchIndex
 from questions.models import Question
 from core.cache import cache
+import time
 
 __author__ = 'chenchiyuan'
 
@@ -18,31 +19,80 @@ class Profile(User):
 
     #static field
     username = StringField(max_length=SLUG_MAX, required=True, unique=True)
-    password = StringField(max_length=TEXT_MAX, required=True)
-    area_slug = StringField(max_length=SLUG_MAX, required=True)
-    snsid = StringField(max_length=TEXT_MAX, default='')
+    password = StringField(max_length=TEXT_MAX)
+    area_slug = StringField(max_length=SLUG_MAX, default='0 ')
+    sns_id = StringField(max_length=TEXT_MAX, default='')
+    #logout clear it
+    access_token = StringField(max_length=TEXT_MAX, default='')
+    expires_in = FloatField(default=0.0)
 
     #dynamic field
+    avatar = StringField(max_length=TEXT_MAX, default='')
     centroid = GeoPointField()
     score = FloatField(default=0.0)
     tags = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
     history = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
+    description = StringField(max_length=TEXT_MAX, default='')
+
+    meta = {
+        'indexes': ['username']
+    }
+
+    @property
+    def expires(self):
+        expires_in = self.expires_in
+        if not expires_in:
+            return float(300)
+        else:
+            return float(expires_in)
+
+    def set_expires_in(self, expires_in):
+        expires_in += time.time()
+        self.update(set__expires_in=expires_in)
+
+    def logout(self):
+        #self.update(set__expires_in=0.0)
+        pass
 
     @classmethod
-    def create_user(cls, username, password, centroid, *args, **kwargs):
-        user = cls(username=username, centroid=centroid, *args, **kwargs)
+    def create_or_get_user(cls, username, password, access_token, centroid, sns_id, expires_in, *args, **kwargs):
+        user = cls(username=username, centroid=centroid, access_token=access_token,
+            sns_id=str(sns_id), *args, **kwargs)
+
+        try:
+            user = cls.objects.get(username=username)
+            user.set_expires_in(expires_in)
+            return user
+        except:
+            pass
+
+        expires_in += time.time()
+
         area_slug = user.__get_area()
         if not area_slug:
             #TODO something if no area is
             area_slug = '0'
         user.area_slug = area_slug
 
-        if password is not None:
+        if password:
             user.set_password(password)
+        else:
+            user.set_password(DEFAULT_PASSWORD)
 
         try:
             user.save()
-        except:
+        except Exception as err:
+            print(err)
+            return None
+
+        return user
+
+    @classmethod
+    def get_by_username(cls, username):
+        try:
+            user = cls.objects.get(username=username)
+        except Exception as err:
+            print(err)
             return None
 
         return user

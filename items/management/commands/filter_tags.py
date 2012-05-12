@@ -9,7 +9,7 @@ c = Connection()
 db = c.tags
 type_db = c.names
 
-BASIC_TAGS = [u'编程语言', u'游戏', u'音乐', u'餐厅', u'餐馆', u'电影', u'书籍']
+BASIC_TAGS = [u'编程语言', u'游戏', u'音乐', u'餐厅', u'电影', u'书籍']
 
 __author__ = 'chenchiyuan'
 

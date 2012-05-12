@@ -2,6 +2,7 @@
 __author__ = 'chenchiyuan'
 import logging
 logger = logging.getLogger('default')
+import simplejson as json
 
 def to_unicode(word):
     if isinstance(word, (unicode, type(None))):
@@ -11,3 +12,8 @@ def to_unicode(word):
     except:
         logger.debug("cannot unicode word %s" %word)
         return None
+
+
+def to_json(data={}, **kwargs):
+    data.update(kwargs)
+    return json.dumps(data)
