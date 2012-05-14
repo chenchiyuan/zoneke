@@ -2,18 +2,20 @@
 from mongoengine.django.auth import User
 from mongoengine.document import Document
 from mongoengine.fields import StringField, GeoPointField, FloatField, ListField, DateTimeField
-from core.const import SLUG_MAX, TEXT_MAX, PLACE_MSG_CENTER_PREFIX, FEEDS_PREFIX, DEFAULT_PASSWORD
+from core.const import (SLUG_MAX, TEXT_MAX, PLACE_MSG_CENTER_PREFIX, FEEDS_PREFIX, DEFAULT_PASSWORD,
+                        PROFILE_PREFIX, TALK_PREFIX, SESSION_PREFIX, EXPIRE_WEEK)
+from utils.util import datetime_to_str
 from places.models import Area
 from core.instant_search import SearchIndex
 from questions.models import Question
-from core.cache import cache
+from core.cache import cache, CacheCenter
 import time
 import datetime
 
 __author__ = 'chenchiyuan'
 
 
-class Profile(User):
+class Profile(User, CacheCenter):
     '''
         Profile login from WEIBO
 
@@ -23,7 +25,7 @@ class Profile(User):
     sns_id = StringField(max_length=TEXT_MAX, unique=True)
     username = StringField(max_length=SLUG_MAX, required=True, unique=True)
     password = StringField(max_length=TEXT_MAX)
-    area_slug = StringField(max_length=SLUG_MAX, default='0 ')
+    area_slug = StringField(max_length=SLUG_MAX, default='0')
     #logout clear it
     access_token = StringField(max_length=TEXT_MAX, default='')
     expires_in = FloatField(default=0.0)
@@ -34,11 +36,50 @@ class Profile(User):
     score = FloatField(default=0.0)
     tags = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
     history = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
+    answers = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
+    likes = ListField(StringField(max_length=SLUG_MAX), default=lambda: [])
+    unlikes = ListField(StringField(max_length=SLUG_MAX, default=lambda: []))
+    followers = ListField(StringField(max_length=SLUG_MAX, default=lambda: []))
+    followings = ListField(StringField(max_length=SLUG_MAX, default=lambda: []))
     description = StringField(max_length=TEXT_MAX, default='')
 
     meta = {
         'indexes': ['sns_id', 'username']
     }
+
+    @classmethod
+    def cls_cache_key(cls, sns_id):
+        return PROFILE_PREFIX + sns_id
+
+    @classmethod
+    def to_info_by_obj(cls, obj):
+        profile = cls.get_by_sns_id(obj)
+        if profile:
+            profile.to_info()
+
+    def cache_key(self):
+        return PROFILE_PREFIX + self.sns_id
+
+    def mapping(self):
+        mapping = {
+            'sns_id': self.sns_id,
+            'username': self.username,
+            'description': self.description,
+            'area_slug': self.area_slug,
+            'access_token': self.access_token,
+            'avatar': self.avatar,
+            'score': self.score,
+            'tags': self.tags,
+            'history': self.history,
+            'answers': self.answers,
+            'likes': self.likes,
+            'unlikes': self.unlikes,
+            'followers': self.followers,
+            'followings': self.followings,
+            'lat': self.centroid[1] if self.centroid else 0,
+            'lng': self.centroid[0] if self.centroid else 0,
+            }
+        return mapping
 
     @property
     def expires(self):
@@ -54,6 +95,54 @@ class Profile(User):
 
     def logout(self):
         #self.update(set__expires_in=0.0)
+        pass
+
+    def follow(self, user_id):
+        user = Profile.get_by_sns_id(user_id)
+        if not user:
+            return
+
+        try:
+            user.update(add_to_set__followers=self.sns_id)
+        except Exception as err:
+            print(err)
+
+        try:
+            self.update(add_to_set__followings=user_id)
+        except Exception as err:
+            print(err)
+
+    def unfollow(self, user_id):
+        if not user_id in self.followings:
+            return
+
+        user = Profile.get_by_sns_id(user_id)
+        if not user:
+            return
+
+        try:
+            user.update(pull__followers=self.sns_id)
+        except Exception as err:
+            print(err)
+
+        try:
+            self.update(pull__followings=user_id)
+        except Exception as err:
+            print(err)
+
+    def like(self, item_id):
+        try:
+            self.update(add_to_set__likes=item_id)
+        except Exception as err:
+            print(err)
+
+    def unlike(self, item_id):
+        try:
+            self.update(add_to_set__unlikes=item_id)
+        except Exception as err:
+            print(err)
+
+    def answer(self, question_id):
         pass
 
     @classmethod
@@ -93,6 +182,16 @@ class Profile(User):
     def get_by_username(cls, username):
         try:
             user = cls.objects.get(username=username)
+        except Exception as err:
+            print(err)
+            return None
+
+        return user
+
+    @classmethod
+    def get_by_sns_id(cls, sns_id):
+        try:
+            user = cls.objects.get(sns_id=sns_id)
         except Exception as err:
             print(err)
             return None
@@ -144,10 +243,13 @@ class Profile(User):
             tags = tags
         self.update(set__tags=tags)
 
-    def talk_to(self, user, content=''):
-        session = Session.create_session(user_sns_id=user.sns_id, content=content)
+    def talk_to(self, user_sns_id, content=''):
+        if isinstance(user_sns_id, Profile):
+            user_sns_id = user_sns_id.sns_id
 
-        talk = Talk.get_or_create_by_users(user_a=self.sns_id, user_b=user.sns_id)
+        session = Session.create_session(user_sns_id=user_sns_id, content=content)
+
+        talk = Talk.get_or_create_by_users(user_a=self.sns_id, user_b=user_sns_id)
         if session:
             talk.add_session(session)
 
@@ -155,7 +257,7 @@ class Profile(User):
         pass
 
 
-class Talk(Document):
+class Talk(Document, CacheCenter):
     #owner is two people who's sns_id smaller
     owner = StringField(max_length=TEXT_MAX)
     talk_to = StringField(max_length=TEXT_MAX, unique_with='owner')
@@ -165,6 +267,50 @@ class Talk(Document):
     meta = {
         'indexes': [('owner', 'talk_to'),]
     }
+
+    @classmethod
+    def cls_cache_key(cls, obj):
+        return TALK_PREFIX + str(obj)
+
+    @classmethod
+    def to_info_by_obj(cls, obj):
+        try:
+            talk = Talk.objects.get(id=obj)
+        except Exception as err:
+            print(err)
+            return
+
+        talk.to_info()
+
+    def cache_key(self):
+        return TALK_PREFIX + str(self.id)
+
+    def mapping(self):
+        user_a_info = Profile.get_info_by_obj(self.owner)
+        user_b_info = Profile.get_info_by_obj(self.talk_to)
+        user_info = {
+            self.owner: user_a_info,
+            self.talk_to: user_b_info
+        }
+
+        history = []
+        for session_id in self.history:
+            info = Session.get_info_by_obj(session_id)
+            print(info)
+            sns_id = info['sns_id']
+            info['username'] = user_info[sns_id]['username']
+            info['avatar'] = user_info[sns_id]['avatar']
+            info['lat'] = user_info[sns_id]['lat']
+            info['lng'] = user_info[sns_id]['lng']
+            history.append(info)
+
+        mapping = {
+            'owner': self.owner,
+            'talk_to': self.talk_to,
+            'history': history
+        }
+
+        return mapping
 
     def add_session(self, session):
         try:
@@ -204,15 +350,31 @@ class Talk(Document):
         talk_to = user_a if tmp_user_a > tmp_user_b else user_b
         return owner, talk_to
 
-
-
-class Session(Document):
+class Session(Document, CacheCenter):
     user_sns_id = StringField(max_length=SLUG_MAX, required=True)
     content = StringField(max_length=TEXT_MAX, default='')
     updated_at = DateTimeField(default=datetime.datetime.now())
 
-    def to_info(self):
-        pass
+    @classmethod
+    def cls_cache_key(cls, id):
+        return SESSION_PREFIX + str(id)
+
+    @classmethod
+    def to_info_by_obj(cls, obj):
+        session = Session.get_by_id(obj)
+        if session:
+            session.to_info()
+
+    def cache_key(self):
+        return SESSION_PREFIX + str(self.id)
+
+    def mapping(self):
+        mapping = {
+            'sns_id': self.user_sns_id,
+            'content': self.content,
+            'updated_at': datetime_to_str(self.updated_at)
+        }
+        return mapping
 
     @classmethod
     def create_session(cls, user_sns_id, content, **kwargs):
