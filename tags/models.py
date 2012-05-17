@@ -27,6 +27,18 @@ class BasicTag(Document):
     friends = ListField(default = lambda:[])
 
     @classmethod
+    def to_index(cls):
+        keys = cache.keys(pattern='%s*' %BASIC_TAG_PREFIX)
+        for key in keys:
+            cache.delete(key)
+
+        items = cls.objects()
+        for item in items:
+            if len(item.name) > 1:
+                key = '%s%s' %(BASIC_TAG_PREFIX, item.name)
+                cache.set(name=key, value=item.score)
+
+    @classmethod
     def create_tag(cls, name, score=0.0, friends=[]):
         tag = cls(name=name, score=score, friends=friends)
         try:

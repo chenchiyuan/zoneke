@@ -42,6 +42,7 @@ class Profile(User, CacheCenter):
     followers = ListField(StringField(max_length=SLUG_MAX, default=lambda: []))
     followings = ListField(StringField(max_length=SLUG_MAX, default=lambda: []))
     description = StringField(max_length=TEXT_MAX, default='')
+    weibo_history = ListField(default=[])
 
     meta = {
         'indexes': ['sns_id', 'username']
@@ -90,7 +91,6 @@ class Profile(User, CacheCenter):
             return float(expires_in)
 
     def set_expires_in(self, expires_in):
-        expires_in += time.time()
         self.update(set__expires_in=expires_in)
 
     def logout(self):
@@ -153,6 +153,8 @@ class Profile(User, CacheCenter):
         try:
             user = cls.objects.get(username=username)
             user.set_expires_in(expires_in)
+            user.update(set__access_token=access_token)
+            user.reload()
             return user
         except:
             pass

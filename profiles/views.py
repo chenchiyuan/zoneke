@@ -27,12 +27,32 @@ def weibo_callback(request):
     description = user_data['description']
     avatar_large = user_data['avatar_large']
 
+    user_timeline = client.get.statuses__user_timeline(access_token=access_token, uid=r.uid)
+    weibo_history = [d['text'] for d in user_timeline['statuses']]
+
     user = Profile.create_or_get_user(username=username, password='', access_token=access_token, centroid=[10, 10],
-        sns_id=user_id, description=description, avatar=avatar_large, expires_in=expires_in)
+        sns_id=user_id, description=description, avatar=avatar_large, expires_in=expires_in,
+        weibo_history=weibo_history)
 
     return HttpResponse(to_json(username=user.username, user_id=user.sns_id,
         description=user.description, avatar_large=user.avatar))
      #   mimetype='application/json')\
+
+def weibo_history(request):
+    import time
+    username = request.GET.get('username')
+    user = Profile.get_by_username(username=username)
+    access_token = user.access_token
+    client = APIClient(app_key=APP_KEY, app_secret=APP_SECRET, redirect_uri=CALLBACK_URL)
+    client.set_access_token(access_token, expires_in=time.time() + 10000)
+
+    user_timeline = client.get.statuses__user_timeline(access_token=access_token, uid=user.sns_id)
+    data = user_timeline['statuses']
+    data = [d['text'] for d in data]
+
+    return HttpResponse(
+        '\n'.join(data)
+    )
 
 def weibo_logout(request):
     username = request.GET.get('username', '')

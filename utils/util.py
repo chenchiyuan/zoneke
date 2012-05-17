@@ -14,6 +14,13 @@ def to_unicode(word):
         logger.debug("cannot unicode word %s" %word)
         return None
 
+def unicode_to_str(word):
+    if isinstance(word, type(None)):
+        return None
+    elif isinstance(word, basestring):
+        return word
+    elif isinstance(word, unicode):
+        return word.encode('utf-8')
 
 def to_json(data={}, **kwargs):
     data.update(kwargs)

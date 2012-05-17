@@ -5,6 +5,8 @@ import os
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
+DJANGO_SETTINGS_MODULE = 'zoneke.settings'
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
