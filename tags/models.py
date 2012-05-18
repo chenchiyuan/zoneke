@@ -38,6 +38,29 @@ class BasicTag(Document):
                 key = '%s%s' %(BASIC_TAG_PREFIX, item.name)
                 cache.set(name=key, value=item.score)
 
+
+    @classmethod
+    def to_file(cls):
+        import os
+        import datetime
+        import codecs
+
+        path = os.getcwd() + '/data/tags/'
+        now = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+
+        file = codecs.open(path + 'tags' + now, 'w', 'utf-8')
+        objs = cls.objects()
+
+        for obj in objs:
+            print("Wrting name %s" %obj.name)
+            name = obj.name
+            score = str(obj.score)
+            friends = '__'.join(obj.friends)
+            file.write('%s\t%s\t%s\n' %(name, score, friends))
+
+        file.close()
+
+
     @classmethod
     def create_tag(cls, name, score=0.0, friends=[]):
         tag = cls(name=name, score=score, friends=friends)
