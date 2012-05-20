@@ -26,6 +26,20 @@ class BasicTag(Document):
     #friend is 'name_score' likes 'dota_0.8'
     friends = ListField(default = lambda:[])
 
+    meta = {
+        'indexes': ['name']
+    }
+
+    @classmethod
+    def get_by_name(cls, name):
+        try:
+            obj = cls.objects.get(name=name)
+        except Exception as err:
+            print(err)
+            return None
+
+        return obj
+
     @classmethod
     def to_index(cls):
         keys = cache.keys(pattern='%s*' %BASIC_TAG_PREFIX)
@@ -37,7 +51,6 @@ class BasicTag(Document):
             if len(item.name) > 1:
                 key = '%s%s' %(BASIC_TAG_PREFIX, item.name)
                 cache.set(name=key, value=item.score)
-
 
     @classmethod
     def to_file(cls):
@@ -60,6 +73,25 @@ class BasicTag(Document):
 
         file.close()
 
+    @classmethod
+    def loads_from_file(cls):
+        import os
+
+        path = os.getcwd() + '/data/basic_tags/'
+        file = open('%s%s' %(path, 'relations'), 'r')
+        lines = file.readlines()
+
+        for line in lines:
+            line = line.replace('\n', '')
+            items = line.split('\t')
+            name = items[0]
+            score = 0.0
+            friends_str = items[1]
+            friends = friends_str.split('__')
+            friends = [f.decode('utf-8') for f in friends]
+            cls.create_tag(name=name.decode('utf-8'), score=score, friends=friends)
+
+        file.close()
 
     @classmethod
     def create_tag(cls, name, score=0.0, friends=[]):
@@ -68,6 +100,7 @@ class BasicTag(Document):
             print("save tag name %s, score %f" %(name, score))
             tag.save()
         except Exception as err:
+            print(err)
             pass
 
     def push_friend(self, tag):
@@ -163,9 +196,6 @@ class BasicTag(Document):
             cls.create_tag(name=name, score=score)
             cache.delete(key)
 
-    meta = {
-         'indexes': ['name']
-        }
 
 class Tag(Document):
     '''

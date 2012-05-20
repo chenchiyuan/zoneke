@@ -4,6 +4,7 @@ from mmseg import seg_txt
 from core.cache import cache
 from utils.util import unicode_to_str
 from core.const import BASIC_TAG_PREFIX
+from tags.models import BasicTag
 
 class UserAction(object):
     '''
@@ -34,12 +35,26 @@ class UserAction(object):
         keys = cache.keys(pattern="%s*" %tmp_cache_key)
 
         for key in keys:
-            value = cache.get(key)
-            cache.zadd(cache_key, float(value), key.split(":::")[1])
+            name = key.split(":::")[1]
+            value = float(cache.get(key))
+            cache.zadd(cache_key, value, name)
             cache.delete(key)
+
+            tag = BasicTag.get_by_name(name=name)
+            if not tag:
+                continue
+
+            relations = tag.friends
+            score = tag.score
+
+            for f in relations:
+                items = f.split(':::')
+                obj_name = items[0]
+                obj_value = float(items[1])
+                result = obj_value/50*value
+                cache.zadd(cache_key, result, obj_name)
 
         results = cache.zrevrange(name=cache_key, start=0, num=30, withscores=True)
         tags = [result[0].decode('utf-8') +'__' + str(result[1]) for result in results]
 
-        print('\n'.join(tags))
-        #self.user.update(push__tags=tags)
+        self.user.update(set__tags=tags)

@@ -54,5 +54,5 @@ class Command(BaseCommand):
             data = cache.zrevrangebyscore(name=key, max='+inf', min='-inf', withscores=True)
             name = key[15:]
             values = '__'.join([l[0]+':::'+str(l[1]) for l in data])
-            file.write(name + '\t' + values + '\n')
+            file.write(name + '\t' + values+'\n')
         file.close()
